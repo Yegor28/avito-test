@@ -36,73 +36,6 @@ type Page struct {
 	Page_size int `json:"page_size"`
 	Adverts []ad `json:"adverts"`
 }
-
-func getAdsList(w http.ResponseWriter, r *http.Request) {
-	var params SearchRequest
-	params.Limit = 10
-	var allAds []ad
-	body, _ := ioutil.ReadAll(r.Body)
-	err := json.Unmarshal(body, &params)
-	if err != nil {
-		fmt.Printf("Invalid params")
-		return
-	}
-
-	db, err := dbConnect(host, port, user, password, dbname)
-	if err != nil {
-		var info errInfo
-		fmt.Printf("Can't connect to database. Error in function dbConnect. Param's function host: %s,"+
-			" user: %s, port: %s, password: s, dbname: %s \n", host, user, port, password, dbname)
-		info.Err = err
-		info.Info = "Can't connect to database. Invalid data."
-		json.NewEncoder(w).Encode(info)
-		return
-	}
-	defer db.Close()
-	rows, err := db.Query("SELECT * FROM advert;")
-	for rows.Next() {
-		var row ad
-		rows.Scan(&row.id, &row.Name, &row.Description, pq.Array(&row.Photos), &row.Price, &row.time)
-		allAds = append(allAds, row)
-	}
-	//сортировка
-	if params.OrderBy != 0 {
-		switch params.OrderField {
-		case "price":
-			sort.SliceStable(allAds, func(i, j int) bool {
-				return allAds[i].Price < allAds[j].Price && (params.OrderBy == 1)
-			})
-		case "time":
-			sort.SliceStable(allAds, func(i, j int) bool {
-				return allAds[i].time.After(allAds[j].time) && (params.OrderBy == 1)
-			})
-		}
-	}
-
-
-	//Пагинация
-	var pageNum float64
-	var i int
-	pageNum = math.Ceil(float64(len(allAds))/float64(params.Limit))
-	var pagesArr []Page
-	fmt.Println(pageNum)
-	for i=0; i < int(pageNum); i++ {
-		start := int(math.Min(float64(i*params.Limit), float64(len(allAds))))
-		end := int(math.Min(float64((i+1)*params.Limit), float64(len(allAds))))
-		page := Page{Page_number: i+1, Page_size: len(allAds[start: end]), Adverts: allAds[start: end]}
-		pagesArr = append(pagesArr, page)
-	}
-
-	resp, err := json.Marshal(pagesArr)
-	if err != nil {
-		panic(err)
-	}
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, string(resp))
-
-
-}
-
 type ad struct {
 	id          int      `json: "ID"`
 	Name        string   `json:"Name" validate:"required,lte=200"`
@@ -111,13 +44,11 @@ type ad struct {
 	Price       int      `json:"Price" validate:"required"`
 	time time.Time
 }
-
 type errInfo struct {
 	Err  error  `json:"error"`
 	Info string `json:"info"`
 }
 
-// vif
 func dbConnect(host, port, user, password, dbname string) (*sql.DB, error) {
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s "+"password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 	db, _ := sql.Open("postgres", psqlInfo)
@@ -255,6 +186,71 @@ func getAd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Println("YES")
+}
+func getAdsList(w http.ResponseWriter, r *http.Request) {
+	var params SearchRequest
+	params.Limit = 10
+	var allAds []ad
+	body, _ := ioutil.ReadAll(r.Body)
+	err := json.Unmarshal(body, &params)
+	if err != nil {
+		fmt.Printf("Invalid params")
+		return
+	}
+
+	db, err := dbConnect(host, port, user, password, dbname)
+	if err != nil {
+		var info errInfo
+		fmt.Printf("Can't connect to database. Error in function dbConnect. Param's function host: %s,"+
+			" user: %s, port: %s, password: s, dbname: %s \n", host, user, port, password, dbname)
+		info.Err = err
+		info.Info = "Can't connect to database. Invalid data."
+		json.NewEncoder(w).Encode(info)
+		return
+	}
+	defer db.Close()
+	rows, err := db.Query("SELECT * FROM advert;")
+	for rows.Next() {
+		var row ad
+		rows.Scan(&row.id, &row.Name, &row.Description, pq.Array(&row.Photos), &row.Price, &row.time)
+		allAds = append(allAds, row)
+	}
+	//сортировка
+	if params.OrderBy != 0 {
+		switch params.OrderField {
+		case "price":
+			sort.SliceStable(allAds, func(i, j int) bool {
+				return allAds[i].Price < allAds[j].Price && (params.OrderBy == 1)
+			})
+		case "time":
+			sort.SliceStable(allAds, func(i, j int) bool {
+				return allAds[i].time.After(allAds[j].time) && (params.OrderBy == 1)
+			})
+		}
+	}
+
+
+	//Пагинация
+	var pageNum float64
+	var i int
+	pageNum = math.Ceil(float64(len(allAds))/float64(params.Limit))
+	var pagesArr []Page
+	fmt.Println(pageNum)
+	for i=0; i < int(pageNum); i++ {
+		start := int(math.Min(float64(i*params.Limit), float64(len(allAds))))
+		end := int(math.Min(float64((i+1)*params.Limit), float64(len(allAds))))
+		page := Page{Page_number: i+1, Page_size: len(allAds[start: end]), Adverts: allAds[start: end]}
+		pagesArr = append(pagesArr, page)
+	}
+
+	resp, err := json.Marshal(pagesArr)
+	if err != nil {
+		panic(err)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, string(resp))
+
+
 }
 
 
