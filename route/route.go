@@ -24,7 +24,7 @@ import (
 	//var dbname   = os.Getenv("DB_NAME")
 
 
-var host    = "http://localhost"
+var host    = "db"
 var port     = "5432"
 var user     = "postgres"
 var password = "452814"
@@ -36,7 +36,7 @@ type errInfo struct {
 	Info string `json:"info"`
 }
 
-func dbConnect(host, port, user, password, dbname string) (*sql.DB, error) {
+func DbConnect(host, port, user, password, dbname string) (*sql.DB, error) {
 	//psqlInfo := fmt.Sprintf("user=%s "+"password=%s dbname=%s port=%s sslmode=disable", user, password, dbname, port)
 	psqlInfo := "host=db port=5432 user=postgres password=452814 dbname=ads sslmode=disable"
 	db, _ := sql.Open("postgres", psqlInfo)
@@ -70,7 +70,7 @@ func CreateAd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db, err := dbConnect(host, port, user, password, dbname)
+	db, err := DbConnect(host, port, user, password, dbname)
 	if err != nil {
 		var info errInfo
 		fmt.Printf("Can't connect to database. Error in function dbConnect. Param's function host: %s,"+
@@ -117,7 +117,7 @@ func CreateAd(w http.ResponseWriter, r *http.Request) {
 }
 func GetAd(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	db, err := dbConnect(host, port, user, password, dbname)
+	db, err := DbConnect(host, port, user, password, dbname)
 	if err != nil {
 		var info errInfo
 		fmt.Printf("Can't connect to database. Error in function dbConnect. Param's function host: %s,"+
@@ -196,7 +196,7 @@ func GetAdsList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	db, err := dbConnect(host, port, user, password, dbname)
+	db, err := DbConnect(host, port, user, password, dbname)
 	if err != nil {
 		var info errInfo
 		fmt.Printf("Can't connect to database. Error in function dbConnect. Param's function host: %s,"+
